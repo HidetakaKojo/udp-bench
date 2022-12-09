@@ -10,3 +10,4 @@ anyhow = "1.0.66"
 clap = { version = "4.0.29", features = ["derive"] }
 crossbeam-channel = "0.5.6"
 ctrlc = "3.2.3"
+nix = { version = "0.26.1", features = ["net"] }
