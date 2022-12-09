@@ -2,11 +2,9 @@ use anyhow::Result;
 use clap::Parser;
 use crossbeam_channel::{select, tick};
 use nix::errno::Errno;
-use nix::sys::socket::{
-    recvmmsg, socket, AddressFamily, MsgFlags, MultiHeaders, RecvMsg, SockFlag, SockType,
-    SockaddrIn,
-};
-use std::{io::IoSliceMut, str::FromStr, time::Duration};
+use nix::sys::socket::{recvmmsg, MsgFlags, MultiHeaders, RecvMsg, SockaddrIn};
+use std::os::unix::io::AsRawFd;
+use std::{io::IoSliceMut, net::UdpSocket, time::Duration};
 use udp_bench::util::ctrl_channel;
 
 #[derive(Parser, Debug)]
@@ -21,17 +19,7 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let sock_addr = SockaddrIn::from_str(
-        format!("{host}:{port}", host = args.host, port = args.port).as_str(),
-    )?;
-
-    let socket = socket(
-        AddressFamily::Inet,
-        SockType::Datagram,
-        SockFlag::empty(),
-        None,
-    )?;
-    nix::sys::socket::bind(socket, &sock_addr)?;
+    let socket = UdpSocket::bind(format!("{host}:{port}", host = args.host, port = args.port))?;
 
     let ticker = tick(Duration::from_millis(1000));
     let ctrlc_receiver = ctrl_channel()?;
@@ -57,7 +45,7 @@ fn main() -> Result<()> {
                 break;
             }
             default => {
-                match recvmmsg(socket, &mut data, msgs.iter(), MsgFlags::MSG_DONTWAIT, None) {
+                match recvmmsg(socket.as_raw_fd(), &mut data, msgs.iter(), MsgFlags::MSG_DONTWAIT, None) {
                     Ok(res) => {
                         let responses: Vec<RecvMsg<SockaddrIn>> = res.collect();
                         received_count += responses.len() as u64;
