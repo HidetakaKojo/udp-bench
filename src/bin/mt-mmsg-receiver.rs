@@ -3,13 +3,12 @@ use clap::Parser;
 use crossbeam_channel::{select, tick};
 use nix::errno::Errno;
 use nix::sys::socket::{
-    self, recvmmsg, socket, sockopt::ReusePort, AddressFamily, MsgFlags, MultiHeaders, RecvMsg,
-    SockFlag, SockType, SockaddrIn,
+    self, recvmmsg, socket,
+    sockopt::{ReceiveTimeout, ReusePort},
+    AddressFamily, MsgFlags, MultiHeaders, RecvMsg, SockFlag, SockType, SockaddrIn,
 };
+use nix::sys::time::TimeVal;
 use std::io::IoSliceMut;
-use std::net::UdpSocket;
-use std::os::unix::io::AsRawFd;
-use std::os::unix::io::FromRawFd;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -55,11 +54,8 @@ fn main() -> Result<()> {
             )
             .unwrap();
             socket::setsockopt(raw_socket, ReusePort, &true).unwrap();
+            socket::setsockopt(raw_socket, ReceiveTimeout, &TimeVal::new(0, 20_000)).unwrap();
             nix::sys::socket::bind(raw_socket, &sock_addr).unwrap();
-            let socket = unsafe { UdpSocket::from_raw_fd(raw_socket) };
-            socket
-                .set_read_timeout(Some(Duration::from_millis(20)))
-                .unwrap();
             let ticker = tick(Duration::from_millis(100));
             let mut msgs = std::collections::LinkedList::new();
             let mut buf = [[0u8; 1500]; BATCH_NUM];
@@ -77,7 +73,7 @@ fn main() -> Result<()> {
                         inner_counter = 0;
                     }
                     default => {
-                        match recvmmsg(socket.as_raw_fd(), &mut data, msgs.iter(), MsgFlags::MSG_DONTWAIT, None) {
+                        match recvmmsg(raw_socket, &mut data, msgs.iter(), MsgFlags::empty(), None) {
                             Ok(res) => {
                                 let responses: Vec<RecvMsg<SockaddrIn>> = res.collect();
                                 inner_counter += responses.len();
