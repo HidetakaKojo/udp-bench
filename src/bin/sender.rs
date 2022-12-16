@@ -17,6 +17,8 @@ struct Args {
     port: u16,
     #[arg(long, default_value_t = 1)]
     thread_num: u16,
+    #[arg(long, default_value_t = 0)]
+    sleep_time: u64,
 }
 
 fn main() -> Result<()> {
@@ -34,6 +36,7 @@ fn main() -> Result<()> {
         let arc_counter = sent_counter.clone();
         let cloned_stopper = stopper.clone();
         let ticker = tick(Duration::from_millis(100));
+        let sleep_time = args.sleep_time.clone();
         let jh = thread::spawn(move || {
             let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
             socket
@@ -52,6 +55,9 @@ fn main() -> Result<()> {
                     default => {
                         let _ = socket.send(&[0, 58]);
                         inner_counter += 1;
+                        if sleep_time > 0 {
+                            thread::sleep(Duration::from_millis(sleep_time));
+                        }
                     }
                 }
             }
