@@ -4,7 +4,7 @@ use crossbeam_channel::{select, tick};
 use nix::errno::Errno;
 use nix::sys::socket::{
     self, recvmmsg, socket,
-    sockopt::{ReceiveTimeout, ReusePort},
+    sockopt::{ReceiveTimeout, ReusePort, RcvBuf},
     AddressFamily, MsgFlags, MultiHeaders, RecvMsg, SockFlag, SockType, SockaddrIn,
 };
 use nix::sys::time::TimeVal;
@@ -19,7 +19,7 @@ use udp_bench::util::ctrl_channel;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(long, default_value = "127.0.0.1")]
+    #[arg(long, default_value = "0.0.0.0")]
     host: String,
     #[arg(long, default_value_t = 3941)]
     port: u16,
@@ -27,7 +27,7 @@ struct Args {
     thread_num: u16,
 }
 
-const BATCH_NUM: usize = 10;
+const BATCH_NUM: usize = 32;
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -55,6 +55,7 @@ fn main() -> Result<()> {
             .unwrap();
             socket::setsockopt(raw_socket, ReusePort, &true).unwrap();
             socket::setsockopt(raw_socket, ReceiveTimeout, &TimeVal::new(0, 20_000)).unwrap();
+            socket::setsockopt(raw_socket, RcvBuf, &(67108864 as usize)).unwrap();
             nix::sys::socket::bind(raw_socket, &sock_addr).unwrap();
             let ticker = tick(Duration::from_millis(100));
             let mut msgs = std::collections::LinkedList::new();

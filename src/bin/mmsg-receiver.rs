@@ -10,7 +10,7 @@ use udp_bench::util::ctrl_channel;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(long, default_value = "127.0.0.1")]
+    #[arg(long, default_value = "0.0.0.0")]
     host: String,
     #[arg(long, default_value_t = 3941)]
     port: u16,

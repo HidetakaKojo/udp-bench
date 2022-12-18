@@ -9,7 +9,7 @@ use udp_bench::util::ctrl_channel;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(long, default_value = "127.0.0.1")]
+    #[arg(long, default_value = "0.0.0.0")]
     host: String,
     #[arg(long, default_value_t = 3941)]
     port: u16,
@@ -18,7 +18,7 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
     let socket = UdpSocket::bind(format!("{host}:{port}", host = args.host, port = args.port))?;
-    socket.set_nonblocking(true)?;
+    socket.set_read_timeout(Some(Duration::from_millis(10)))?;
 
     let ticker = tick(Duration::from_millis(1000));
     let ctrlc_receiver = ctrl_channel()?;
