@@ -56,7 +56,7 @@ fn main() -> Result<()> {
                         let _ = socket.send(&[0, 58]);
                         inner_counter += 1;
                         if sleep_time > 0 {
-                            thread::sleep(Duration::from_millis(sleep_time));
+                            thread::sleep(Duration::from_micros(sleep_time));
                         }
                     }
                 }
